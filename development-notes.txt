@@ -1,0 +1,4 @@
+1) Created Azure Function App project for "ImageProcessor":
+	- open "Azure_Functions_Workshop_Project" directory in VS Code;
+	- in Command Palette use "Azure Functions: Create New Project..."
+	- use C#, .NET 9, 
