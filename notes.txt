@@ -1,0 +1,75 @@
+
+Version 1 - one Function App:
+
+1) Function App - ImageProcessor.
+It has 1 function: ImageValidator
+
+ImageValidator function: 
+Http-triggered.
+Reads name of the blob from the Request Body.
+Blob must be in the "inbound" directory.
+checks that the uploaded blob is actually an image. It checks both extension, maximum size (10 MB) and content of the uploaded blob (byte signature).
+If all is good:
+	- it sets a metadata tag on the blob: status = valid
+If problem:
+	- it deletes the blob
+
+=================
+
+Version 2 - two Function Apps:
+
+1) 1st Function App - ImageProcessor.
+It has 1 function: ImageValidator
+
+ImageValidator function: 
+Http-triggered.
+Reads name of the blob from the Request Body.
+Blob must be in the "inbound" directory.
+checks that the uploaded blob is actually an image. It checks both extension, maximum size (10 MB) and content of the uploaded blob (byte signature).
+If all is good:
+	- it sets a metadata tag on the blob: status = valid
+If problem:
+	- it moves the blob to "problematic" directory
+	- it sets a metadata tag on the blob: status = invalid
+	- it calls OnDemandCleaner function in the second Function App
+
+2) 2nd Function App - StorageCleaner. 
+It has 1 function: OnDemandCleaner.
+Http-triggered.
+Reads name of the blob from the Request Body.
+Checks metadata tag status. If that tag is "valid", then execution aborts. Otherwise it deletes the blob.
+
+=================
+
+Version 3 - two Function Apps:
+
+1) 1st Function App - ImageProcessor.
+It has 2 functions: ImageValidator and ImageResizer
+
+ImageValidator function: 
+Http-triggered.
+Reads name of the blob from the Request Body.
+Blob must be in the "inbound" directory.
+checks that the uploaded blob is actually an image. It checks both extension, maximum size (10 MB) and content of the uploaded blob (byte signature).
+If all is good:
+	- it sets a metadata tag on the blob: status = valid
+	- it triggers second function in the App - ImageResizer
+If problem:
+	- it moves the blob to "problematic" directory
+	- it sets a metadata tag on the blob: status = invalid
+	- it calls OnDemandCleaner function in the second Function App
+
+ImageResizer function:
+Http-triggered.
+Reads name of the blob from the Request Body.
+Checks metadata tag status = valid. If that tag is missing or not "valid", then execution aborts.
+Uses the "inbound" image to create a "resized_<inbound>" image blob. Uploads the created image to "resized" directory. Sets metadata tag to the "resized_<inbound>" image blob: original = <name of the inbound image>. 
+Sets metadata tag to the original "inbound" image: resized = <name of the resized image>
+
+2) 2nd Function App - StorageCleaner. 
+It has 1 function: OnDemandCleaner.
+
+OnDemandCleaner:
+Http-triggered.
+Reads name of the blob from the Request Body.
+Checks metadata tag status. If that tag is "valid", then execution aborts. Otherwise it deletes the blob.
