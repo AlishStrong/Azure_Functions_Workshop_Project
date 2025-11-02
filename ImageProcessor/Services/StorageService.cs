@@ -1,5 +1,4 @@
 using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Logging;
 
 namespace ImageProcessor.Services;
@@ -21,20 +20,18 @@ public class StorageService : IStorageService
     public async Task<Stream> DownloadFile(string filePath)
     {
         BlobClient blobClient = _imagesContainerClient.GetBlobClient(filePath);
-        using MemoryStream memoryStream = new();
+        MemoryStream memoryStream = new();
 
         if (blobClient.Exists())
         {
             await blobClient.DownloadToAsync(memoryStream);
             memoryStream.Position = 0;
-            using StreamReader streamReader = new(memoryStream);
-            string blobContent = await streamReader.ReadToEndAsync();
-            _logger.LogWarning($"Content of {filePath} is: '{blobContent}'");
-        } else
+        }
+        else
         {
             _logger.LogWarning($"Blob {filePath} does not exist in Storage Account '{blobClient.AccountName}'.");
         }
-
+        
         return memoryStream;
     }
 

@@ -26,5 +26,6 @@ if (storageAccountConnectionString != null)
 }
 
 builder.Services.AddSingleton<IStorageService, StorageService>();
+builder.Services.AddSingleton<IValidationService, ValidationService>();
 
 builder.Build().Run();
