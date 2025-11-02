@@ -1,34 +1,44 @@
+using System.Net;
 using System.Text.Json;
 using ImageProcessor.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 
 namespace ImageProcessor;
 
 public class ImageValidator
 {
-    private readonly ILogger<ImageValidator> _logger;
+    //private readonly ILogger<ImageValidator> _logger;
     private readonly IStorageService _storageService;
     private readonly IValidationService _validationService;
 
     public ImageValidator(
-        ILogger<ImageValidator> logger,
+        //ILogger<ImageValidator> logger,
         IStorageService storageService,
         IValidationService validationService
     )
     {
-        _logger = logger;
+        //_logger = logger;
         _storageService = storageService;
         _validationService = validationService;
     }
 
     [Function("ImageValidator")]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
+    public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req)
     {
+        JsonDocument parsedBody;
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-        using JsonDocument parsedBody = JsonDocument.Parse(requestBody);
+        try
+        {
+          parsedBody = JsonDocument.Parse(requestBody);  
+        }
+        catch (Exception)
+        {
+            HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
+            await res.WriteStringAsync("File name was not provided!");
+            return res;
+        }
 
         if (
             parsedBody.RootElement.TryGetProperty("file", out JsonElement fileElement) &&
@@ -45,21 +55,29 @@ public class ImageValidator
                 bool isValidImage = _validationService.IsImage(bytesStream);
                 if (isValidImage)
                 {
-                    return new OkObjectResult($"File {fileName} is a valid image");
+                    HttpResponseData res = req.CreateResponse(HttpStatusCode.OK);
+                    await res.WriteStringAsync($"File {fileName} is a valid image");
+                    return res;
                 }
                 else
                 {
-                    return new BadRequestObjectResult($"File {fileName} is NOT a valid image!");
+                    HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await res.WriteStringAsync($"File {fileName} is NOT a valid image!");
+                    return res;
                 }
             }
             else
             {
-                return new BadRequestObjectResult("File not found!");
+                HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
+                await res.WriteStringAsync("File not found!");
+                return res;
             }
         }
         else
         {
-            return new BadRequestObjectResult("File name was not provided!");
+            HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
+            await res.WriteStringAsync("File name was not provided!");
+            return res;
         }
     }
 }
