@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
+using ImageProcessor.Common;
 using ImageProcessor.Services;
+using ImageProcessor.Tests.TestHelpers;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Moq;
@@ -17,6 +19,10 @@ public class ImageValidator_Tests
 
     // SUT
     private readonly ImageValidator _imageValidator;
+
+    // Storage imitations for unit tests
+    private readonly List<StorageBlob> _inboundBlobs = [];
+    private readonly List<StorageBlob> _deletedBlobs = [];
 
     public ImageValidator_Tests()
     {
@@ -84,38 +90,75 @@ public class ImageValidator_Tests
     }
 
     [Fact]
-    public async Task Should_return_BadRequest_if_file_not_image()
+    public async Task Should_return_BadRequest_and_delete_file_if_file_not_image()
     {
-        string fileName = "test-file";
+        // Arrange
+        _inboundBlobs.Clear();
+        _deletedBlobs.Clear();
+
+        string blobName = "file";
+        StorageBlob fileBlob = new(blobName);
+        _inboundBlobs.Add(fileBlob);
+
         byte[] fileBytes = Encoding.UTF8.GetBytes("does not matter content");
         _storageServiceMock.Setup(s => s.DownloadFile(It.IsAny<string>())).ReturnsAsync(new MemoryStream(fileBytes));
+        _storageServiceMock
+            .Setup(s => s.DeleteFile(It.IsAny<string>()))
+            .Callback<string>(s =>
+            {
+                _inboundBlobs.Remove(fileBlob);
+                _deletedBlobs.Add(fileBlob);
+            });
         _validationServiceMock.Setup(v => v.IsImage(It.IsAny<Stream>())).Returns(false);
-        _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{fileName}"" }}")));
+        _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{fileBlob.Name}"" }}")));
+        
+        // Act
         HttpResponseData res = await _imageValidator.Run(_requestDataMock.Object);
 
+        // Assert
         res.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(res.Body);
         var responseBody = await reader.ReadToEndAsync();
 
-        Assert.Equal($"File {fileName} is NOT a valid image!", responseBody);
+        Assert.Equal($"File {fileBlob.Name} is NOT a valid image!", responseBody);
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+
+        Assert.Empty(_inboundBlobs);
+        Assert.NotEmpty(_deletedBlobs);
+        Assert.Equal(blobName, _deletedBlobs.First().Name);
     }
     
     [Fact]
-    public async Task Should_return_OK_if_file_is_image()
+    public async Task Should_return_OK_and_set_StatusValid_if_file_is_image()
     {
-        string fileName = "test-file";
+        // Arrange
+        _inboundBlobs.Clear();
+        _deletedBlobs.Clear();
+
+        string blobName = "image";
+        StorageBlob imageBlob = new(blobName);
+        _inboundBlobs.Add(imageBlob);
+
         byte[] fileBytes = Encoding.UTF8.GetBytes("does not matter content");
         _storageServiceMock.Setup(s => s.DownloadFile(It.IsAny<string>())).ReturnsAsync(new MemoryStream(fileBytes));
+        _storageServiceMock
+            .Setup(s => s.SetMetadataTags(It.IsAny<Dictionary<string, string>>()))
+            .Callback<Dictionary<string, string>>(tags => imageBlob.Status = tags.First().Value);
         _validationServiceMock.Setup(v => v.IsImage(It.IsAny<Stream>())).Returns(true);
-        _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{fileName}"" }}")));
+        _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{imageBlob.Name}"" }}")));
+        
+        // Act
         HttpResponseData res = await _imageValidator.Run(_requestDataMock.Object);
 
+        // Assert
         res.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(res.Body);
         var responseBody = await reader.ReadToEndAsync();
 
-        Assert.Equal($"File {fileName} is a valid image", responseBody);
+        Assert.Equal($"File {imageBlob.Name} is a valid image", responseBody);
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+
+        Assert.Empty(_deletedBlobs);
+        Assert.Equal(Constants.Valid, imageBlob.Status);
     }
 }

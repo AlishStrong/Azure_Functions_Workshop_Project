@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using ImageProcessor.Common;
 using ImageProcessor.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -55,12 +56,20 @@ public class ImageValidator
                 bool isValidImage = _validationService.IsImage(bytesStream);
                 if (isValidImage)
                 {
+                    // Set metadata tag status - valid
+                    Dictionary<string, string> statusValid = new Dictionary<string, string>
+                    {
+                        { Constants.Status, Constants.Valid },
+                    };
+                    await _storageService.SetMetadataTags(statusValid);
                     HttpResponseData res = req.CreateResponse(HttpStatusCode.OK);
                     await res.WriteStringAsync($"File {fileName} is a valid image");
                     return res;
                 }
                 else
                 {
+                    // Delete invalid non-image file
+                    await _storageService.DeleteFile(fileName);
                     HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
                     await res.WriteStringAsync($"File {fileName} is NOT a valid image!");
                     return res;
