@@ -90,6 +90,41 @@ public class ImageValidator_Tests
     }
 
     [Fact]
+    public async Task Should_return_BadRequest_and_delete_file_if_too_big()
+    {
+        // Arrange
+        _inboundBlobs.Clear();
+        _deletedBlobs.Clear();
+
+        string blobName = "huge";
+        StorageBlob fileBlob = new(blobName);
+        _inboundBlobs.Add(fileBlob);
+
+        byte[] fileBytes = Encoding.UTF8.GetBytes("too much");
+        _storageServiceMock.Setup(s => s.DownloadFile(It.IsAny<string>())).ReturnsAsync(new MemoryStream(fileBytes));
+        _storageServiceMock
+            .Setup(s => s.DeleteFile(It.IsAny<string>()))
+            .Callback<string>(s =>
+            {
+                _inboundBlobs.Remove(fileBlob);
+                _deletedBlobs.Add(fileBlob);
+            });
+        _validationServiceMock.Setup(v => v.IsValidSize(It.IsAny<Stream>())).Returns(false);
+        _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{fileBlob.Name}"" }}")));
+
+        // Act
+        HttpResponseData res = await _imageValidator.Run(_requestDataMock.Object);
+
+        // Assert
+        res.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(res.Body);
+        var responseBody = await reader.ReadToEndAsync();
+
+        Assert.Equal($"File {blobName} is too big!", responseBody);
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
     public async Task Should_return_BadRequest_and_delete_file_if_file_not_image()
     {
         // Arrange
@@ -109,6 +144,7 @@ public class ImageValidator_Tests
                 _inboundBlobs.Remove(fileBlob);
                 _deletedBlobs.Add(fileBlob);
             });
+        _validationServiceMock.Setup(v => v.IsValidSize(It.IsAny<Stream>())).Returns(true);
         _validationServiceMock.Setup(v => v.IsImage(It.IsAny<Stream>())).Returns(false);
         _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{fileBlob.Name}"" }}")));
         
@@ -142,8 +178,9 @@ public class ImageValidator_Tests
         byte[] fileBytes = Encoding.UTF8.GetBytes("does not matter content");
         _storageServiceMock.Setup(s => s.DownloadFile(It.IsAny<string>())).ReturnsAsync(new MemoryStream(fileBytes));
         _storageServiceMock
-            .Setup(s => s.SetMetadataTags(It.IsAny<Dictionary<string, string>>()))
-            .Callback<Dictionary<string, string>>(tags => imageBlob.Status = tags.First().Value);
+            .Setup(s => s.SetMetadataTags(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+            .Callback<string, Dictionary<string, string>>((_, tags) => imageBlob.Status = tags.First().Value);
+        _validationServiceMock.Setup(v => v.IsValidSize(It.IsAny<Stream>())).Returns(true);
         _validationServiceMock.Setup(v => v.IsImage(It.IsAny<Stream>())).Returns(true);
         _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{imageBlob.Name}"" }}")));
         

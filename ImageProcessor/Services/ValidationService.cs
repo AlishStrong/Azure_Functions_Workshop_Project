@@ -1,3 +1,4 @@
+using ImageProcessor.Common;
 using Microsoft.Extensions.Logging;
 
 namespace ImageProcessor.Services;
@@ -6,11 +7,14 @@ public class ValidationService : IValidationService
 {
     private readonly ILogger<ValidationService> _logger;
 
+    private readonly long maxSizeBytes;
+
     public ValidationService(
         ILogger<ValidationService> logger
     )
     {
         _logger = logger;
+        maxSizeBytes = Constants.MaxSizeMegaBytesFactor * 1024 * 1024;
     }
     
     public bool IsImage(Stream blobBytes)
@@ -30,14 +34,16 @@ public class ValidationService : IValidationService
             {
                 _logger.LogWarning("File is not a valid image; invalid byte signature.");
                 return false;
-            } else
+            }
+            else
             {
                 bool isPng = IsJPEG(signatureBytes);
                 if (isPng)
                 {
                     _logger.LogWarning("File is a valid JPEG image.");
                     return isPng;
-                } else
+                }
+                else
                 {
                     bool isJpg = IsPNG(signatureBytes);
                     if (isJpg)
@@ -57,7 +63,15 @@ public class ValidationService : IValidationService
 
     public bool IsValidSize(Stream blobBytes)
     {
-        throw new NotImplementedException();
+        if (blobBytes.Length > maxSizeBytes)
+        {
+            _logger.LogWarning($"File size is too big! It is {blobBytes.Length} B, but allowed max is {maxSizeBytes} (10 MB)!");
+            return false;
+        } else
+        {
+            _logger.LogWarning($"File size is {blobBytes.Length} B. It is valid");
+            return true;
+        }
     }
 
     private bool IsJPEG(byte[] signatureBytes)

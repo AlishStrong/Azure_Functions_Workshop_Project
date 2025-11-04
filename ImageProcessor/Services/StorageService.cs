@@ -35,13 +35,30 @@ public class StorageService : IStorageService
         return memoryStream;
     }
 
-    public Task DeleteFile(string filePath)
+    public async Task DeleteFile(string filePath)
     {
-        throw new NotImplementedException();
+        BlobClient blobClient = _imagesContainerClient.GetBlobClient(filePath);
+
+        if (blobClient.Exists() && (await blobClient.DeleteIfExistsAsync()).Value)
+        {
+            _logger.LogWarning($"Blob {filePath} was deleted.");
+        }
+        else
+        {
+            _logger.LogWarning($"Blob {filePath} does not exist in Storage Account '{blobClient.AccountName}'.");
+        }
     }
 
-    public Task SetMetadataTags(Dictionary<string, string> metadataTags)
+    public async Task SetMetadataTags(string filePath, Dictionary<string, string> metadataTags)
     {
-        throw new NotImplementedException();
+        BlobClient blobClient = _imagesContainerClient.GetBlobClient(filePath);
+
+        if (blobClient.Exists())
+        {
+            await blobClient.SetMetadataAsync(metadataTags);
+        } else
+        {
+            _logger.LogWarning($"Cannot set Metadata Tags on Blob {filePath}. It does not exist in Storage Account '{blobClient.AccountName}'.");
+        }
     }
 }

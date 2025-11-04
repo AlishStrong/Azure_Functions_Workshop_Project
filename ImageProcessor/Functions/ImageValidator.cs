@@ -48,20 +48,31 @@ public class ImageValidator
             )
         {
             string fileName = fileElement.GetString()!;
-            using Stream bytesStream = await _storageService.DownloadFile(fileName);
+            string filePath = Path.Combine(Constants.InboundDir, fileName);
+            using Stream bytesStream = await _storageService.DownloadFile(filePath);
             bytesStream.Position = 0;
 
             if (bytesStream != null && bytesStream.CanRead && bytesStream.Length > 0)
             {
+                bool isValidSize = _validationService.IsValidSize(bytesStream);
+                if (!isValidSize)
+                {
+                    // Delete file that is too big
+                    await _storageService.DeleteFile(filePath);
+                    HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await res.WriteStringAsync($"File {fileName} is too big!");
+                    return res;
+                }
+                                
                 bool isValidImage = _validationService.IsImage(bytesStream);
                 if (isValidImage)
                 {
                     // Set metadata tag status - valid
-                    Dictionary<string, string> statusValid = new Dictionary<string, string>
+                    Dictionary<string, string> statusValid = new()
                     {
                         { Constants.Status, Constants.Valid },
                     };
-                    await _storageService.SetMetadataTags(statusValid);
+                    await _storageService.SetMetadataTags(filePath, statusValid);
                     HttpResponseData res = req.CreateResponse(HttpStatusCode.OK);
                     await res.WriteStringAsync($"File {fileName} is a valid image");
                     return res;
@@ -69,7 +80,7 @@ public class ImageValidator
                 else
                 {
                     // Delete invalid non-image file
-                    await _storageService.DeleteFile(fileName);
+                    await _storageService.DeleteFile(filePath);
                     HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
                     await res.WriteStringAsync($"File {fileName} is NOT a valid image!");
                     return res;
