@@ -1,4 +1,14 @@
 1) Created Azure Function App project for "ImageProcessor":
 	- open "Azure_Functions_Workshop_Project" directory in VS Code;
 	- in Command Palette use "Azure Functions: Create New Project..."
-	- use C#, .NET 9, 
+	- use C#, .NET 9;
+
+2) Created xUnit project "ImageProcessor.Tests":
+	- Go to Solution Explorer in VS Code and press plus-sign (+) on 	"Azure_Functions_Workshop_Project";
+	- Add ProjectReference of ImageProcessor.csproj to ImageProcessor.Tests.csproj;
+
+3) Prepare Release version of ImageProcessor project:
+	- open ImageProcessor directory in a terminal
+	- execute: dotnet publish -c Release -o ./publish
+	- this command will create a release version of ImageProcessor in "publish" directory;
+	- the directory's content can be zipped and deployed to Azure Function App instance;
