@@ -1,0 +1,30 @@
+
+name: Build and Test ImageProcessor Azure Function App
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: Build and Test ImageProcessor
+
+    steps:
+
+    - name: Checkout branch
+      uses: actions/checkout@v4
+
+    - name: Setup .NET v${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore ImageProcessor dependencies
+      run: dotnet restore ImageProcessor.Tests/ImageProcessor.Tests.csproj
+    
+    - name: Run ImageProcessor unit tests
+      run: dotnet test ImageProcessor.Tests/ImageProcessor.Tests.csproj --configuration Release --no-restore --verbosity normal
