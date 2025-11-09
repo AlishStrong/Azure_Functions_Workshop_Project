@@ -38,8 +38,21 @@ jobs:
     - name: Install Azurite
       run: |
         npm install -g azurite
-        azurite --inMemory --silent &
+        azurite --inMemoryPersistence --silent &
         echo "Azurite started in in-memory mode"
+
+    - name: Wait for Azurite
+      run: |
+        for i in {1..10}; do
+        if curl -s http://localhost:10000 > /dev/null; then
+            echo "Azurite is ready"
+            exit 0
+        fi
+        echo "Waiting for Azurite to start..."
+        sleep 2
+        done
+        echo "Azurite did not start in time"
+        exit 1
 
     - name: Install Azure Function Core Tools
       run: npm i -g azure-functions-core-tools@4
