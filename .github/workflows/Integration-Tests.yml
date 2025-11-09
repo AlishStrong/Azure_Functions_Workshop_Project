@@ -35,6 +35,12 @@ jobs:
       run: |
         dotnet build ImageProcessor/ImageProcessor.csproj --configuration Release --no-restore
 
+    - name: Install Azurite
+      run: |
+        npm install -g azurite
+        azurite --inMemory --silent &
+        echo "Azurite started in in-memory mode"
+
     - name: Install Azure Function Core Tools
       run: npm i -g azure-functions-core-tools@4
 
@@ -64,6 +70,8 @@ jobs:
     - name: Make a request to running ImageProcessor 1
       run: curl --request POST http://localhost:7071/api/imagevalidator --data '{"file":"works"}'
 
-    - name: Stop ImageProcessor
-      run: pkill -f "func host start"
+    - name: Stop ImageProcessor and Azurite
+      run: |
+        pkill -f "func host start"
+        pkill -f "azurite"
         
