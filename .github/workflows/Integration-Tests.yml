@@ -49,6 +49,7 @@ jobs:
         for i in {1..10}; do
         if curl -s http://localhost:7071 > /dev/null; then
             echo "ImageProcessor is ready"
+            curl --request POST http://localhost:7071/api/imagevalidator
             exit 0
         fi
         echo "Waiting for ImageProcessor to start..."
@@ -57,7 +58,10 @@ jobs:
         echo "ImageProcessor did not start in time"
         exit 1
 
-    - name: Make a request to running ImageProcessor
+    - name: Make a request to running ImageProcessor 2
+      run: curl --request POST http://localhost:7071/api/imagevalidator
+
+    - name: Make a request to running ImageProcessor 1
       run: curl --request POST http://localhost:7071/api/imagevalidator --data '{"file":"works"}'
 
     - name: Stop ImageProcessor
