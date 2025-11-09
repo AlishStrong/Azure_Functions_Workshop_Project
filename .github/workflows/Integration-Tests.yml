@@ -41,8 +41,25 @@ jobs:
     - name: Run ImageProcessor
       run: |
         cd ImageProcessor
-        func host start
+        func host start &
+        echo "ImageProcessor started in the background"
+
+    - name: Wait for ImageProcessor to launch
+      run: |
+        for i in {1..10}; do
+        if curl -s http://localhost:7071 > /dev/null; then
+            echo "ImageProcessor is ready"
+            exit 0
+        fi
+        echo "Waiting for ImageProcessor to start..."
+        sleep 2
+        done
+        echo "ImageProcessor did not start in time"
+        exit 1
 
     - name: Make a request to running ImageProcessor
       run: curl --request POST http://localhost:7071/api/imagevalidator --data '{"file":"works"}'
+
+    - name: Stop ImageProcessor
+      run: pkill -f "func host start"
         
