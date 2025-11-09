@@ -24,7 +24,16 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Restore ImageProcessor dependencies
-      run: dotnet restore ImageProcessor.Tests/ImageProcessor.Tests.csproj
+      run: |
+        dotnet restore ImageProcessor/ImageProcessor.csproj
+        dotnet restore ImageProcessor.Tests/ImageProcessor.Tests.csproj
+
+    - name: Build ImageProcessor
+      run: |
+        dotnet build ImageProcessor/ImageProcessor.csproj --configuration Release --no-restore
+
+    - name: Build ImageProcessor.Tests
+      run: dotnet build ImageProcessor.Tests/ImageProcessor.Tests.csproj --configuration Release --no-restore
     
     - name: Run ImageProcessor unit tests
-      run: dotnet test ImageProcessor.Tests/ImageProcessor.Tests.csproj --configuration Release --no-restore --verbosity normal
+      run: dotnet test ImageProcessor.Tests/ImageProcessor.Tests.csproj --configuration Release --no-build --verbosity normal
