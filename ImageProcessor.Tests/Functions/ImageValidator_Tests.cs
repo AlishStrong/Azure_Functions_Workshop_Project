@@ -163,7 +163,7 @@ public class ImageValidator_Tests
         Assert.NotEmpty(_deletedBlobs);
         Assert.Equal(blobName, _deletedBlobs.First().Name);
     }
-    
+
     [Fact]
     public async Task Should_return_OK_and_set_StatusValid_if_file_is_image()
     {
@@ -183,7 +183,7 @@ public class ImageValidator_Tests
         _validationServiceMock.Setup(v => v.IsValidSize(It.IsAny<Stream>())).Returns(true);
         _validationServiceMock.Setup(v => v.IsImage(It.IsAny<Stream>())).Returns(true);
         _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{imageBlob.Name}"" }}")));
-        
+
         // Act
         HttpResponseData res = await _imageValidator.Run(_requestDataMock.Object);
 
@@ -197,5 +197,34 @@ public class ImageValidator_Tests
 
         Assert.Empty(_deletedBlobs);
         Assert.Equal(Constants.Valid, imageBlob.Status);
+    }
+    
+    [Fact]
+    public async Task Should_return_InternalServerError_if_faced_Exception_at_Storage()
+    {
+         // Arrange
+        _inboundBlobs.Clear();
+        _deletedBlobs.Clear();
+
+        string blobName = "image";
+        StorageBlob imageBlob = new(blobName);
+        _inboundBlobs.Add(imageBlob);
+
+        _storageServiceMock.Setup(s => s.DownloadFile(It.IsAny<string>())).ThrowsAsync(new Exception(""));
+        _requestDataMock.Setup(r => r.Body).Returns(new MemoryStream(Encoding.UTF8.GetBytes($@"{{ ""file"": ""{imageBlob.Name}"" }}")));
+
+        // Act
+        HttpResponseData res = await _imageValidator.Run(_requestDataMock.Object);
+
+        // Assert
+        res.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(res.Body);
+        var responseBody = await reader.ReadToEndAsync();
+
+        Assert.Equal("Unexpected exception happened while processing the request", responseBody);
+        Assert.Equal(HttpStatusCode.InternalServerError, res.StatusCode);
+
+        Assert.Empty(_deletedBlobs);
+        Assert.Contains(imageBlob, _inboundBlobs);
     }
 }

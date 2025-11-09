@@ -22,7 +22,7 @@ public class StorageService : IStorageService
         BlobClient blobClient = _imagesContainerClient.GetBlobClient(filePath);
         MemoryStream memoryStream = new();
 
-        if (blobClient.Exists())
+        if (await blobClient.ExistsAsync())
         {
             await blobClient.DownloadToAsync(memoryStream);
             memoryStream.Position = 0;
