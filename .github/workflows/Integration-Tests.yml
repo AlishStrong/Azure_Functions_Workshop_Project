@@ -1,0 +1,48 @@
+name: Integration Test
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  azure-function-core-tools:
+    runs-on: ubuntu-latest
+    name: Run integration tests
+    env:
+        CUSTOMCONNSTR_AZURE_STORAGE: "UseDevelopmentStorage=true"
+        FUNCTIONS_WORKER_RUNTIME: "dotnet-isolated"
+
+    steps:
+    - name: Echo envs
+      run: echo "CUSTOMCONNSTR_AZURE_STORAGE is $CUSTOMCONNSTR_AZURE_STORAGE and FUNCTIONS_WORKER_RUNTIME is $FUNCTIONS_WORKER_RUNTIME"
+
+    - name: Checkout branch
+      uses: actions/checkout@v4
+
+    - name: Setup .NET v${{ env.DOTNET_VERSION }}
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore ImageProcessor dependencies
+      run: |
+        dotnet restore ImageProcessor/ImageProcessor.csproj
+
+    - name: Build ImageProcessor
+      run: |
+        dotnet build ImageProcessor/ImageProcessor.csproj --configuration Release --no-restore
+
+    - name: Install Azure Function Core Tools
+      run: npm i -g azure-functions-core-tools@4
+
+    - name: Run ImageProcessor
+      run: |
+        cd ImageProcessor
+        func host start
+
+    - name: Make a request to running ImageProcessor
+      run: curl --request POST http://localhost:7071/api/imagevalidator --data '{"file":"works"}'
+        
