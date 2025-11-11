@@ -12,3 +12,9 @@
 	- execute: dotnet publish -c Release -o ./publish
 	- this command will create a release version of ImageProcessor in "publish" directory;
 	- the directory's content can be zipped and deployed to Azure Function App instance;
+
+4) Automated deploy with GitHub Actions even with Pluralsight Sandbox:
+Main instructions: https://learn.microsoft.com/en-us/azure/azure-functions/functions-how-to-github-actions?tabs=windows%2Cdotnet&pivots=method-template#next-steps
+	- Get Publish Profile using the UI
+	- Add it as a secret for Actions in GitHub Repository's settings
+	- Use Azure/functions-action@v1 action to deploy to Function App instance
