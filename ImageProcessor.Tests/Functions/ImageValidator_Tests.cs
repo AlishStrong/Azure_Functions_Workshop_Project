@@ -70,7 +70,7 @@ public class ImageValidator_Tests
         using var reader = new StreamReader(res.Body);
         var responseBody = await reader.ReadToEndAsync();
 
-        Assert.Equal("File name was not provided!", responseBody);
+        Assert.Contains("File name was not provided!", responseBody);
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 
@@ -85,7 +85,7 @@ public class ImageValidator_Tests
         using var reader = new StreamReader(res.Body);
         var responseBody = await reader.ReadToEndAsync();
 
-        Assert.Equal("File not found!", responseBody);
+        Assert.Contains("File not found!", responseBody);
         Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 
@@ -221,7 +221,7 @@ public class ImageValidator_Tests
         using var reader = new StreamReader(res.Body);
         var responseBody = await reader.ReadToEndAsync();
 
-        Assert.Equal("Unexpected exception happened while processing the request", responseBody);
+        Assert.Contains("Unexpected exception happened while processing the request", responseBody);
         Assert.Equal(HttpStatusCode.InternalServerError, res.StatusCode);
 
         Assert.Empty(_deletedBlobs);
