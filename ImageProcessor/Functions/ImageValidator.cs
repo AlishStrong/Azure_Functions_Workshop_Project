@@ -28,7 +28,7 @@ public class ImageValidator
     [Function("ImageValidator")]
     public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req)
     {
-        Console.WriteLine("ImageValidator Reporting to World!");
+        Console.WriteLine("ImageValidator Published to World!");
         JsonDocument parsedBody;
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
         try
@@ -38,7 +38,7 @@ public class ImageValidator
         catch (Exception)
         {
             HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
-            await res.WriteStringAsync("ImageValidator reports: File name was not provided!");
+            await res.WriteStringAsync("ImageValidator published: File name was not provided!");
             return res;
         }
 
@@ -92,14 +92,14 @@ public class ImageValidator
                 else
                 {
                     HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
-                    await res.WriteStringAsync("ImageValidator reports: File not found!");
+                    await res.WriteStringAsync("ImageValidator published: File not found!");
                     return res;
                 }
             }
             else
             {
                 HttpResponseData res = req.CreateResponse(HttpStatusCode.BadRequest);
-                await res.WriteStringAsync("ImageValidator reports: File name was not provided!");
+                await res.WriteStringAsync("ImageValidator published: File name was not provided!");
                 return res;
             }
         }
@@ -107,7 +107,7 @@ public class ImageValidator
         {
             Console.WriteLine(ex.Message);
             HttpResponseData res = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await res.WriteStringAsync("ImageValidator reports: Unexpected exception happened while processing the request");
+            await res.WriteStringAsync("ImageValidator published: Unexpected exception happened while processing the request");
             return res;
         }
     }
