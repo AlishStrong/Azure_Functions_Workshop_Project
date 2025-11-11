@@ -6,6 +6,8 @@ on:
     branches: ["main"]
 
 env:
+  AZURE_FUNCTIONAPP_NAME: 'ImageProcessor'   # set this to your function app name on Azure
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: './ImageProcessor'
   DOTNET_VERSION: '9.0.x'
 
 jobs:
@@ -30,10 +32,20 @@ jobs:
 
     - name: Build ImageProcessor
       run: |
-        dotnet build ImageProcessor/ImageProcessor.csproj --configuration Release --no-restore
+        pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+        dotnet build --configuration Release --no-restore --output ./output
+        popd
 
     - name: Build ImageProcessor.Tests
       run: dotnet build ImageProcessor.Tests/ImageProcessor.Tests.csproj --configuration Release --no-restore
     
     - name: Run ImageProcessor unit tests
       run: dotnet test ImageProcessor.Tests/ImageProcessor.Tests.csproj --configuration Release --no-build --verbosity normal
+    
+    - name: 'Deploy ImageProcessor'
+      uses: Azure/functions-action@v1
+      id: fa
+      with:
+        app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+        package: '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output'
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
