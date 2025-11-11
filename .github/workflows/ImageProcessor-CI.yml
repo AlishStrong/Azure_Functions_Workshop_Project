@@ -2,6 +2,7 @@
 name: Build and Test ImageProcessor Azure Function App
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main"]
 
